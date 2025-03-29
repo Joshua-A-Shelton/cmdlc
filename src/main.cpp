@@ -211,9 +211,15 @@ int main(int argc, char**argv)
             {
                 std::cout << "Bones not currently supported\n";
             }
+            auto string = outStream.str();
             uint64_t meshLength = outStream.tellp();
             outFile.write((char*)&meshLength, sizeof(uint64_t));
-            outFile << outStream.rdbuf();
+            for (auto i=0; i< string.length(); i++)
+            {
+                outFile << ((unsigned char)string[i]);
+                std::cout << ((unsigned char)string[i]);
+            }
+            //outFile << outStream.rdbuf();
         }
     }
     else
