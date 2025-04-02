@@ -106,7 +106,7 @@ int main(int argc, char**argv)
 
     Assimp::Importer importer;
 
-    const aiScene* scene = importer.ReadFile(inputFile.string(),aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_GenUVCoords);
+    const aiScene* scene = importer.ReadFile(inputFile.string(),aiProcess_Triangulate | aiProcess_GenNormals | aiProcess_FlipUVs);
     if (scene && scene->HasMeshes())
     {
         std::ofstream outFile(outputFile, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -172,11 +172,18 @@ int main(int argc, char**argv)
             }
             if (mesh->HasTextureCoords(0))
             {
+                struct vec2{float x,y;};
+                std::vector<vec2> texCoords(mesh->mNumVertices);
+                for (auto i = 0; i < mesh->mNumVertices; i++)
+                {
+                    auto uvData = mesh->mTextureCoords[0][i];
+                    texCoords[i] = {.x = uvData.x,.y = uvData.y};
+                }
                 outStream.write((char*)&UV, sizeof(uint16_t));
                 int32_t uncompressedSize = mesh->mNumVertices*2*sizeof(float);
                 int32_t compressedSize = LZ4_compressBound(uncompressedSize);
                 std::vector<char> compressedData(compressedSize);
-                compressedSize = LZ4_compress_fast((char*)mesh->mTextureCoords[0],compressedData.data(),uncompressedSize,compressedSize,1);
+                compressedSize = LZ4_compress_fast((char*)&texCoords[0],compressedData.data(),uncompressedSize,compressedSize,1);
                 outStream.write((char*)&compressedSize, sizeof(int32_t));
                 outStream.write((char*)&uncompressedSize, sizeof(int32_t));
                 outStream.write(compressedData.data(), compressedSize);
@@ -217,9 +224,7 @@ int main(int argc, char**argv)
             for (auto i=0; i< string.length(); i++)
             {
                 outFile << ((unsigned char)string[i]);
-                std::cout << ((unsigned char)string[i]);
             }
-            //outFile << outStream.rdbuf();
         }
     }
     else
